@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- 排除敏感数据：加密的HTML文件数据库不应备份 -->
+    <exclude domain="database" path="html_files.db" />
+    <exclude domain="file" path="html_files/" />
+    <exclude domain="file" path="html_cache/" />
+    <!-- 仅备份非敏感的SharedPreferences -->
+    <include domain="sharedpref" path="*.xml" />
+</full-backup-content>
