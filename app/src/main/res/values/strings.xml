@@ -118,4 +118,6 @@
     <string name="confirm_delete_message">确定要删除 "%s" 吗？此操作无法撤销。</string>
     <string name="action_rename">重命名</string>
     <string name="hint_new_name">新文件名</string>
+    <string name="action_fullscreen">全屏</string>
+    <string name="action_exit_fullscreen">退出全屏</string>
 </resources>
