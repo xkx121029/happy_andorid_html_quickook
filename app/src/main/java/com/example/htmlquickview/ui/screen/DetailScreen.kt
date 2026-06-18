@@ -46,6 +46,7 @@ fun DetailScreen(
     var showExportDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var isFullscreen by remember { mutableStateOf(false) }
     var annotations by remember { mutableStateOf<List<Annotation>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
@@ -74,125 +75,50 @@ fun DetailScreen(
 
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = htmlFile.fileName,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (htmlFile.sourceUrl != null) {
+            if (!isFullscreen) {
+                CenterAlignedTopAppBar(
+                    title = {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             Text(
-                                text = htmlFile.sourceUrl,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1
+                                text = htmlFile.fileName,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(
-                        onClick = onBack,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back))
-                    }
-                },
-                actions = {
-                    // 批注按钮
-                    BadgedBox(
-                        badge = {
-                            if (annotations.isNotEmpty()) {
-                                Badge(
-                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                                ) {
-                                    Text(annotations.size.toString())
-                                }
+                            if (htmlFile.sourceUrl != null) {
+                                Text(
+                                    text = htmlFile.sourceUrl,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1
+                                )
                             }
                         }
-                    ) {
+                    },
+                    navigationIcon = {
                         IconButton(
-                            onClick = { showAnnotationPanel = true },
+                            onClick = onBack,
                             colors = IconButtonDefaults.iconButtonColors(
                                 contentColor = MaterialTheme.colorScheme.onSurface
                             )
                         ) {
-                            Icon(Icons.Default.Edit, stringResource(R.string.action_annotate))
+                            Icon(Icons.Default.ArrowBack, stringResource(R.string.action_back))
                         }
-                    }
+                    },
+                    actions = {
+                        // 全屏按钮
+                        IconButton(
+                            onClick = { isFullscreen = true },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(Icons.Default.Fullscreen, stringResource(R.string.action_fullscreen))
+                        }
 
-                    // 更多菜单
-                    IconButton(
-                        onClick = { showMoreMenu = true },
-                        colors = IconButtonDefaults.iconButtonColors(
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    ) {
-                        Icon(Icons.Default.MoreVert, stringResource(R.string.action_more))
-                    }
-
-                    DropdownMenu(
-                        expanded = showMoreMenu,
-                        onDismissRequest = { showMoreMenu = false },
-                        modifier = Modifier.widthIn(max = 240.dp)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_save_webpage)) },
-                            onClick = {
-                                showMoreMenu = false
-                                showSaveDialog = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.CloudDownload, null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_export)) },
-                            onClick = {
-                                showMoreMenu = false
-                                showExportDialog = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.FileDownload, null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_share)) },
-                            onClick = {
-                                showMoreMenu = false
-                                shareLauncher.launch(htmlFile.fileName)
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Share, null)
-                            }
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                    actionIconContentColor = MaterialTheme.colorScheme.onSurface,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface
-                )
-            )
-        },
-        bottomBar = {
-            // 底部批注快捷入口
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.surface,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                tonalElevation = 8.dp
-            ) {
-                NavigationBarItem(
-                    icon = {
+                        // 批注按钮
                         BadgedBox(
                             badge = {
                                 if (annotations.isNotEmpty()) {
@@ -205,61 +131,150 @@ fun DetailScreen(
                                 }
                             }
                         ) {
-                            Icon(Icons.Default.Notes, stringResource(R.string.action_annotate))
+                            IconButton(
+                                onClick = { showAnnotationPanel = true },
+                                colors = IconButtonDefaults.iconButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                Icon(Icons.Default.Edit, stringResource(R.string.action_annotate))
+                            }
+                        }
+
+                        // 更多菜单
+                        IconButton(
+                            onClick = { showMoreMenu = true },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(Icons.Default.MoreVert, stringResource(R.string.action_more))
+                        }
+
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false },
+                            modifier = Modifier.widthIn(max = 240.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_save_webpage)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showSaveDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.CloudDownload, null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_export)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    showExportDialog = true
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FileDownload, null)
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_share)) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    shareLauncher.launch(htmlFile.fileName)
+                                },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Share, null)
+                                }
+                            )
                         }
                     },
-                    label = {
-                        Text(
-                            stringResource(R.string.label_annotations),
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    },
-                    selected = showAnnotationPanel,
-                    onClick = { showAnnotationPanel = !showAnnotationPanel },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface,
+                        actionIconContentColor = MaterialTheme.colorScheme.onSurface,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onSurface
                     )
                 )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.FileDownload, stringResource(R.string.action_export)) },
-                    label = {
-                        Text(
-                            stringResource(R.string.label_export),
-                            style = MaterialTheme.typography.labelSmall
+            }
+        },
+        bottomBar = {
+            if (!isFullscreen) {
+                // 底部批注快捷入口
+                NavigationBar(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    tonalElevation = 8.dp
+                ) {
+                    NavigationBarItem(
+                        icon = {
+                            BadgedBox(
+                                badge = {
+                                    if (annotations.isNotEmpty()) {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        ) {
+                                            Text(annotations.size.toString())
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Notes, stringResource(R.string.action_annotate))
+                            }
+                        },
+                        label = {
+                            Text(
+                                stringResource(R.string.label_annotations),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        selected = showAnnotationPanel,
+                        onClick = { showAnnotationPanel = !showAnnotationPanel },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                         )
-                    },
-                    selected = showExportDialog,
-                    onClick = { showExportDialog = !showExportDialog },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                     )
-                )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.CloudDownload, stringResource(R.string.action_save_webpage)) },
-                    label = {
-                        Text(
-                            stringResource(R.string.label_save_offline),
-                            style = MaterialTheme.typography.labelSmall
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.FileDownload, stringResource(R.string.action_export)) },
+                        label = {
+                            Text(
+                                stringResource(R.string.label_export),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        selected = showExportDialog,
+                        onClick = { showExportDialog = !showExportDialog },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                         )
-                    },
-                    selected = showSaveDialog,
-                    onClick = { showSaveDialog = !showSaveDialog },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = MaterialTheme.colorScheme.primary,
-                        selectedTextColor = MaterialTheme.colorScheme.primary,
-                        unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                     )
-                )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.CloudDownload, stringResource(R.string.action_save_webpage)) },
+                        label = {
+                            Text(
+                                stringResource(R.string.label_save_offline),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        },
+                        selected = showSaveDialog,
+                        onClick = { showSaveDialog = !showSaveDialog },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.primary,
+                            selectedTextColor = MaterialTheme.colorScheme.primary,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                        )
+                    )
+                }
             }
         }
     ) { paddingValues ->
@@ -324,6 +339,20 @@ fun DetailScreen(
                     color = MaterialTheme.colorScheme.primary,
                     strokeWidth = 4.dp
                 )
+            }
+
+            // 全屏退出按钮
+            if (isFullscreen) {
+                FloatingActionButton(
+                    onClick = { isFullscreen = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                ) {
+                    Icon(Icons.Default.FullscreenExit, stringResource(R.string.action_exit_fullscreen))
+                }
             }
         }
     }

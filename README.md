@@ -60,6 +60,35 @@ app/src/main/java/com/example/htmlquickview/
 
 Release构建需要配置签名密钥，请在 `app/build.gradle.kts` 中配置您的签名信息。
 
+## 更新日志
+
+### v1.1.0 (2026-06-14)
+
+**新增功能**
+- 新增文件重命名功能，支持在文件列表中直接重命名HTML文件
+- 新增删除确认对话框，防止误删文件
+
+**UI改进**
+- 改进排序菜单，增加当前排序状态指示器（勾选标记）
+- 优化文件列表显示，使用 `key` 参数提升LazyColumn性能
+- 新增滑动删除交互组件（SwipeableItem）
+
+**代码优化**
+- 清理冗余代码，移除未使用的 `HtmlCacheService` 和 `SearchResultItem`
+- 新增 `renameFile` 方法到 ViewModel
+- 补充新的字符串资源
+
+### v1.0.0 (2024-XX-XX)
+
+**初始版本**
+- HTML文件管理（创建、查看、删除）
+- 文件夹组织系统
+- 标签分类系统
+- 全文搜索功能
+- 收藏功能
+- 浏览历史记录
+- 注解功能
+
 ## 许可证
 
 本项目基于 MIT 许可证开源。

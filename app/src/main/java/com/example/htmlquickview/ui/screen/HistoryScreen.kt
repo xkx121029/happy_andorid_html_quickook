@@ -72,7 +72,10 @@ fun HistoryScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(history) { record ->
+                items(
+                    items = history,
+                    key = { it.id }
+                ) { record ->
                     HistoryItem(
                         record = record,
                         onOpen = {

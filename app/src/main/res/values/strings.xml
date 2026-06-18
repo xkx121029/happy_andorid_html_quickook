@@ -107,4 +107,15 @@
     <string name="label_annotations">批注</string>
     <string name="label_export">导出</string>
     <string name="label_save_offline">离线保存</string>
+    <string name="action_sort">排序</string>
+    <string name="sort_by_date_desc">最新优先</string>
+    <string name="sort_by_date_asc">最早优先</string>
+    <string name="sort_by_name_asc">名称 A-Z</string>
+    <string name="sort_by_name_desc">名称 Z-A</string>
+    <string name="sort_by_size_desc">大小降序</string>
+    <string name="sort_by_size_asc">大小升序</string>
+    <string name="confirm_delete_title">确认删除</string>
+    <string name="confirm_delete_message">确定要删除 "%s" 吗？此操作无法撤销。</string>
+    <string name="action_rename">重命名</string>
+    <string name="hint_new_name">新文件名</string>
 </resources>

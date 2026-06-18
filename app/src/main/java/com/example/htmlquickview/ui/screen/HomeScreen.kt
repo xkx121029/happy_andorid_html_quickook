@@ -35,10 +35,15 @@ fun HomeScreen(
     var showPasteDialog by remember { mutableStateOf(false) }
     var selectedCategory by remember { mutableStateOf(HtmlFileViewModel.Category.ALL) }
     var showMenu by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
     var showFolderManager by remember { mutableStateOf(false) }
     var showTagManager by remember { mutableStateOf(false) }
     var moveFileToFolder by remember { mutableStateOf<HtmlFile?>(null) }
+    var fileToDelete by remember { mutableStateOf<HtmlFile?>(null) }
+    var fileToRename by remember { mutableStateOf<HtmlFile?>(null) }
+    var renameText by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val currentSortType by viewModel.sortType.observeAsState(HtmlFileViewModel.SortType.DATE_DESC)
 
     val files by viewModel.allFiles.observeAsState(emptyList())
     val folders by viewModel.allFolders.observeAsState(emptyList())
@@ -142,6 +147,16 @@ fun HomeScreen(
                         onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
+                            text = { Text(stringResource(R.string.action_sort)) },
+                            onClick = {
+                                showMenu = false
+                                showSortMenu = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Sort, null)
+                            }
+                        )
+                        DropdownMenuItem(
                             text = { Text(stringResource(R.string.action_folder_manager)) },
                             onClick = {
                                 showMenu = false
@@ -159,6 +174,85 @@ fun HomeScreen(
                             },
                             leadingIcon = {
                                 Icon(Icons.Default.LocalOffer, null)
+                            }
+                        )
+                    }
+
+                    // 排序子菜单
+                    DropdownMenu(
+                        expanded = showSortMenu,
+                        onDismissRequest = { showSortMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort_by_date_desc)) },
+                            onClick = {
+                                showSortMenu = false
+                                viewModel.setSortType(HtmlFileViewModel.SortType.DATE_DESC)
+                            },
+                            leadingIcon = {
+                                if (currentSortType == HtmlFileViewModel.SortType.DATE_DESC) {
+                                    Icon(Icons.Default.Check, null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort_by_date_asc)) },
+                            onClick = {
+                                showSortMenu = false
+                                viewModel.setSortType(HtmlFileViewModel.SortType.DATE_ASC)
+                            },
+                            leadingIcon = {
+                                if (currentSortType == HtmlFileViewModel.SortType.DATE_ASC) {
+                                    Icon(Icons.Default.Check, null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort_by_name_asc)) },
+                            onClick = {
+                                showSortMenu = false
+                                viewModel.setSortType(HtmlFileViewModel.SortType.NAME_ASC)
+                            },
+                            leadingIcon = {
+                                if (currentSortType == HtmlFileViewModel.SortType.NAME_ASC) {
+                                    Icon(Icons.Default.Check, null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort_by_name_desc)) },
+                            onClick = {
+                                showSortMenu = false
+                                viewModel.setSortType(HtmlFileViewModel.SortType.NAME_DESC)
+                            },
+                            leadingIcon = {
+                                if (currentSortType == HtmlFileViewModel.SortType.NAME_DESC) {
+                                    Icon(Icons.Default.Check, null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort_by_size_desc)) },
+                            onClick = {
+                                showSortMenu = false
+                                viewModel.setSortType(HtmlFileViewModel.SortType.SIZE_DESC)
+                            },
+                            leadingIcon = {
+                                if (currentSortType == HtmlFileViewModel.SortType.SIZE_DESC) {
+                                    Icon(Icons.Default.Check, null)
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.sort_by_size_asc)) },
+                            onClick = {
+                                showSortMenu = false
+                                viewModel.setSortType(HtmlFileViewModel.SortType.SIZE_ASC)
+                            },
+                            leadingIcon = {
+                                if (currentSortType == HtmlFileViewModel.SortType.SIZE_ASC) {
+                                    Icon(Icons.Default.Check, null)
+                                }
                             }
                         )
                     }
@@ -215,12 +309,16 @@ fun HomeScreen(
             LazyColumn(
                 modifier = Modifier.fillMaxSize()
             ) {
-                items(displayedFiles) { file ->
+                items(
+                    items = displayedFiles,
+                    key = { it.id }
+                ) { file ->
                     HtmlFileItem(
                         htmlFile = file,
                         tags = fileTagsMap[file.id] ?: emptyList(),
                         onOpen = { onOpenFile(file) },
-                        onDelete = { viewModel.deleteFile(file) },
+                        onDelete = { fileToDelete = file },
+                        onRename = { fileToRename = it; renameText = it.fileName },
                         onToggleFavorite = { viewModel.toggleFavorite(file.id) },
                         onEditTags = { editingFileTags = file },
                         onMoveToFolder = { moveFileToFolder = file }
@@ -321,6 +419,52 @@ fun HomeScreen(
             onSelectFolder = { folderId ->
                 viewModel.moveFileToFolder(file.id, folderId)
                 moveFileToFolder = null
+            }
+        )
+    }
+
+    // 删除确认对话框
+    fileToDelete?.let { file ->
+        ConfirmDialog(
+            title = stringResource(R.string.confirm_delete_title),
+            message = stringResource(R.string.confirm_delete_message, file.fileName),
+            onConfirm = {
+                viewModel.deleteFile(file)
+                fileToDelete = null
+            },
+            onCancel = { fileToDelete = null }
+        )
+    }
+
+    // 重命名对话框
+    fileToRename?.let { file ->
+        AlertDialog(
+            onDismissRequest = { fileToRename = null },
+            title = { Text(stringResource(R.string.dialog_title_rename)) },
+            text = {
+                OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    label = { Text(stringResource(R.string.hint_new_name)) },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (renameText.isNotBlank()) {
+                            viewModel.renameFile(file.id, renameText)
+                        }
+                        fileToRename = null
+                    }
+                ) {
+                    Text(stringResource(R.string.btn_save))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { fileToRename = null }) {
+                    Text(stringResource(R.string.btn_cancel))
+                }
             }
         )
     }

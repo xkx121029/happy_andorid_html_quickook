@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
@@ -42,6 +43,7 @@ fun HtmlFileItem(
     tags: List<Tag> = emptyList(),
     onOpen: (HtmlFile) -> Unit,
     onDelete: (HtmlFile) -> Unit,
+    onRename: ((HtmlFile) -> Unit)? = null,
     onToggleFavorite: ((HtmlFile) -> Unit)? = null,
     onEditTags: ((HtmlFile) -> Unit)? = null,
     onMoveToFolder: ((HtmlFile) -> Unit)? = null
@@ -49,71 +51,90 @@ fun HtmlFileItem(
     var expanded by remember { mutableStateOf(false) }
     val dateFormat = remember { SimpleDateFormat("MM-dd HH:mm", Locale.getDefault()) }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(8.dp)
-            .clickable { onOpen(htmlFile) },
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Description,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = htmlFile.fileName.ifEmpty { "未命名" },
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+    SwipeableItem(
+        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+        swipeThreshold = 120f,
+        leftActions = {
+            // 右滑时显示：收藏和重命名
+            if (onToggleFavorite != null) {
+                IconButton(onClick = { onToggleFavorite(htmlFile) }) {
+                    Icon(
+                        imageVector = if (htmlFile.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = if (htmlFile.isFavorite) stringResource(R.string.action_remove_favorite) else stringResource(R.string.action_add_favorite),
+                        tint = Color(0xFFFF4081)
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        Text(
-                            text = FileUtils.formatFileSize(htmlFile.fileSize),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
-                        )
-                        Text(
-                            text = dateFormat.format(htmlFile.createdAt),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
-                        )
-                    }
                 }
             }
-
+            if (onRename != null) {
+                IconButton(onClick = { onRename(htmlFile) }) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = stringResource(R.string.action_rename),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        },
+        rightActions = {
+            // 左滑时显示：删除
+            IconButton(onClick = { onDelete(htmlFile) }) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.action_delete),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onOpen(htmlFile) },
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        ) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                if (onToggleFavorite != null) {
-                    IconButton(
-                        onClick = { onToggleFavorite(htmlFile) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (htmlFile.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = if (htmlFile.isFavorite) stringResource(R.string.action_remove_favorite) else stringResource(R.string.action_add_favorite),
-                            tint = if (htmlFile.isFavorite) Color(0xFFFF4081) else MaterialTheme.colorScheme.onSurfaceVariant
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Description,
+                        contentDescription = null,
+                        modifier = Modifier.size(40.dp),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = htmlFile.fileName.ifEmpty { "未命名" },
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            Text(
+                                text = FileUtils.formatFileSize(htmlFile.fileSize),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
+                            )
+                            Text(
+                                text = dateFormat.format(htmlFile.createdAt),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
+                            )
+                        }
                     }
                 }
 
-                Box(modifier = Modifier) {
+                // 只保留更多按钮
+                Box {
                     IconButton(
                         onClick = { expanded = !expanded },
                         modifier = Modifier.size(36.dp)
@@ -132,9 +153,6 @@ fun HtmlFileItem(
                                 onClick = {
                                     expanded = false
                                     onEditTags(htmlFile)
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.MoreVert, null)
                                 }
                             )
                         }
@@ -144,41 +162,23 @@ fun HtmlFileItem(
                                 onClick = {
                                     expanded = false
                                     onMoveToFolder(htmlFile)
-                                },
-                                leadingIcon = {
-                                    Icon(Icons.Default.MoreVert, null)
                                 }
                             )
                         }
-                        Divider(color = MaterialTheme.colorScheme.outlineVariant)
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.action_delete)) },
-                            onClick = {
-                                expanded = false
-                                onDelete(htmlFile)
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
-                            },
-                            colors = MenuDefaults.itemColors(
-                                textColor = MaterialTheme.colorScheme.error,
-                                leadingIconColor = MaterialTheme.colorScheme.error
-                            )
-                        )
                     }
                 }
             }
-        }
 
-        if (tags.isNotEmpty()) {
-            FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                tags.forEach { tag ->
-                    TagChip(tag = tag)
+            if (tags.isNotEmpty()) {
+                FlowRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    tags.forEach { tag ->
+                        TagChip(tag = tag)
+                    }
                 }
             }
         }

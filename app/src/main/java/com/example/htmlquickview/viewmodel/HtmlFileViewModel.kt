@@ -190,6 +190,15 @@ class HtmlFileViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun renameFile(fileId: Long, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val file = repository.getFileById(fileId)
+            file?.let {
+                repository.updateFile(it.copy(fileName = newName))
+            }
+        }
+    }
+
     // ===== Tag Operations =====
     fun addTagToFile(htmlFileId: Long, tagId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
