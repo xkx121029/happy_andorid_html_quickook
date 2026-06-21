@@ -16,106 +16,113 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
-// Material 3 深色模式颜色方案
+// 品牌主色 - 现代渐变蓝紫色系
+private val PrimaryBlue = Color(0xFF6366F1)    // Indigo 500
+private val PrimaryBlueLight = Color(0xFF818CF8)  // Indigo 400
+private val PrimaryPurple = Color(0xFF8B5CF6)     // Violet 500
+
+// 深色模式颜色方案 - 现代化深色主题
 private val DarkColorScheme = darkColorScheme(
-    primary = Color(0xFFA78BFA),
-    onPrimary = Color(0xFF1E1B4B),
-    primaryContainer = Color(0xFF312E81),
-    onPrimaryContainer = Color(0xFFE9D5FF),
-    secondary = Color(0xFFC4B5FD),
-    onSecondary = Color(0xFF312E81),
-    secondaryContainer = Color(0xFF4C1D95),
-    onSecondaryContainer = Color(0xFFE9D5FF),
-    tertiary = Color(0xFFF0ABFC),
-    onTertiary = Color(0xFF4A1D65),
-    tertiaryContainer = Color(0xFF6D28D9),
-    onTertiaryContainer = Color(0xFFF5D0FE),
-    error = Color(0xFFFCA5A5),
-    errorContainer = Color(0xFFDC2626),
-    onError = Color(0xFF7F1D1D),
+    primary = PrimaryBlue,
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFF1E1B4B),
+    onPrimaryContainer = Color(0xFFE0E7FF),
+    secondary = PrimaryPurple,
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFF312E81),
+    onSecondaryContainer = Color(0xFFC7D2FE),
+    tertiary = Color(0xFFEC4899),               // Pink 500
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFF831843),
+    onTertiaryContainer = Color(0xFFFCE7F3),
+    error = Color(0xFFF87171),                  // Red 400
+    errorContainer = Color(0xFFB91C1C),
+    onError = Color(0xFFFFFFFF),
     onErrorContainer = Color(0xFFFEE2E2),
-    background = Color(0xFF0F0F14),
-    onBackground = Color(0xFFE4E4E7),
-    surface = Color(0xFF18181B),
-    onSurface = Color(0xFFE4E4E7),
-    surfaceVariant = Color(0xFF3F3F46),
-    onSurfaceVariant = Color(0xFFA1A1AA),
-    outline = Color(0xFF71717A),
-    outlineVariant = Color(0xFF3F3F46),
+    background = Color(0xFF0F0F1A),              // 深邃背景
+    onBackground = Color(0xFFE2E8F0),
+    surface = Color(0xFF16162A),                // 深色卡片
+    onSurface = Color(0xFFE2E8F0),
+    surfaceVariant = Color(0xFF1F1F3A),         // 卡片变体
+    onSurfaceVariant = Color(0xFF94A3B8),
+    outline = Color(0xFF475569),
+    outlineVariant = Color(0xFF334155),
     scrim = Color(0xFF000000),
-    inverseSurface = Color(0xFFE4E4E7),
-    inverseOnSurface = Color(0xFF18181B),
-    inversePrimary = Color(0xFF4C1D95)
+    inverseSurface = Color(0xFFE2E8F0),
+    inverseOnSurface = Color(0xFF0F0F1A),
+    inversePrimary = PrimaryBlueLight,
+    surfaceTint = PrimaryBlue
 )
 
-// Material 3 浅色模式颜色方案
+// 浅色模式颜色方案 - 现代化浅色主题
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFF6D28D9),
+    primary = PrimaryBlue,
     onPrimary = Color(0xFFFFFFFF),
-    primaryContainer = Color(0xFFE9D5FF),
+    primaryContainer = Color(0xFFE0E7FF),
     onPrimaryContainer = Color(0xFF312E81),
-    secondary = Color(0xFF7C3AED),
+    secondary = PrimaryPurple,
     onSecondary = Color(0xFFFFFFFF),
-    secondaryContainer = Color(0xFFE9D5FF),
+    secondaryContainer = Color(0xFFEDE9FE),
     onSecondaryContainer = Color(0xFF4C1D95),
-    tertiary = Color(0xFF9D174D),
+    tertiary = Color(0xFFDB2777),               // Pink 600
     onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFFFD6E8),
-    onTertiaryContainer = Color(0xFF6D0A35),
+    tertiaryContainer = Color(0xFFFCE7F3),
+    onTertiaryContainer = Color(0xFF831843),
     error = Color(0xFFDC2626),
     errorContainer = Color(0xFFFEE2E2),
     onError = Color(0xFFFFFFFF),
     onErrorContainer = Color(0xFF7F1D1D),
-    background = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF18181B),
-    surface = Color(0xFFFEFEFE),
-    onSurface = Color(0xFF18181B),
-    surfaceVariant = Color(0xFFE4E4E7),
-    onSurfaceVariant = Color(0xFF4B5563),
-    outline = Color(0xFF71717A),
-    outlineVariant = Color(0xFFE4E4E7),
+    background = Color(0xFFF8FAFC),              // 浅灰背景
+    onBackground = Color(0xFF1E293B),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1E293B),
+    surfaceVariant = Color(0xFFF1F5F9),        // 浅色卡片变体
+    onSurfaceVariant = Color(0xFF64748B),
+    outline = Color(0xFFCBD5E1),
+    outlineVariant = Color(0xFFE2E8F0),
     scrim = Color(0xFF000000),
-    inverseSurface = Color(0xFF27272A),
-    inverseOnSurface = Color(0xFFF4F4F5),
-    inversePrimary = Color(0xFFC4B5FD)
+    inverseSurface = Color(0xFF1E293B),
+    inverseOnSurface = Color(0xFFF8FAFC),
+    inversePrimary = PrimaryBlueLight,
+    surfaceTint = PrimaryBlue
 )
 
-// Material 3 Typography - 使用Google Sans字体
+// Material 3 Typography - 优化字体样式
 val HtmlQuickViewTypography = Typography(
     displayLarge = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Light,
+        fontWeight = FontWeight.Bold,
         fontSize = 57.sp,
         lineHeight = 64.sp,
         letterSpacing = (-0.25).sp
     ),
     displayMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Bold,
         fontSize = 45.sp,
         lineHeight = 52.sp
     ),
     displaySmall = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Bold,
         fontSize = 36.sp,
         lineHeight = 44.sp
     ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp
     ),
     headlineSmall = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp
     ),
@@ -127,7 +134,7 @@ val HtmlQuickViewTypography = Typography(
     ),
     titleMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 24.sp,
         letterSpacing = 0.1.sp
@@ -183,12 +190,12 @@ val HtmlQuickViewTypography = Typography(
     )
 )
 
-// Material 3 Shapes
+// Material 3 Shapes - 现代化圆角
 val HtmlQuickViewShapes = Shapes(
-    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
-    small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-    medium = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-    large = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+    small = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+    medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    large = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
     extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
 )
 
@@ -222,7 +229,7 @@ fun HtmlQuickViewTheme(
     }
 
     val colorScheme = when {
-        // Android 12+ 支持动态颜色
+        // Android 12+ 支持动态颜色（可选）
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
@@ -235,7 +242,7 @@ fun HtmlQuickViewTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            // 使用surface颜色作为状态栏背景，实现现代效果
+            // 使用surface颜色作为状态栏背景
             window.statusBarColor = colorScheme.surface.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
                 isAppearanceLightStatusBars = !darkTheme

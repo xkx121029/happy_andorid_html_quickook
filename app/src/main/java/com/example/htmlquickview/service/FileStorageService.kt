@@ -44,6 +44,31 @@ class FileStorageService(private val context: Context) {
         return "html_${timestamp}.html"
     }
 
+    /**
+     * 生成唯一文件名。如果 preferredName 已存在，则自动添加序号 (2), (3), (4)...
+     */
+    fun generateUniqueFileName(preferredName: String): String {
+        val allFiles = listAllFiles()
+        val existingNames = allFiles.map { it.name }.toSet()
+
+        if (!existingNames.contains(preferredName)) {
+            return preferredName
+        }
+
+        val baseName = preferredName.removeSuffix(".html")
+        var index = 2
+        while (index <= 9999) {
+            val newName = "${baseName}(${index}).html"
+            if (!existingNames.contains(newName)) {
+                return newName
+            }
+            index++
+        }
+
+        // 兜底：使用带时间戳的名称
+        return generateFileName()
+    }
+
     fun saveHtmlContent(content: String, fileName: String): String {
         val file = File(htmlFilesDir, fileName)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {

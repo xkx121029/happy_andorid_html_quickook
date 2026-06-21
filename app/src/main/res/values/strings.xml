@@ -120,4 +120,19 @@
     <string name="hint_new_name">新文件名</string>
     <string name="action_fullscreen">全屏</string>
     <string name="action_exit_fullscreen">退出全屏</string>
+    <string name="dialog_title_preview_mode">选择预览方式</string>
+    <string name="msg_select_preview_mode">请选择HTML文件的预览方式：</string>
+    <string name="label_local_preview">本地预览</string>
+    <string name="desc_local_preview">直接加载本地HTML文件，无需服务器</string>
+    <string name="label_chrome_preview">Chrome预览</string>
+    <string name="desc_chrome_preview">启动本地服务器，使用Chrome浏览器打开</string>
+    <string name="label_webview_preview">WebView预览</string>
+    <string name="desc_webview_preview">启动本地服务器，通过WebView内嵌访问</string>
+    <string name="label_internal_webview">内置WebView</string>
+    <string name="desc_internal_webview">使用系统内置浏览器内核，快速加载</string>
+    <string name="label_external_browser">外部浏览器</string>
+    <string name="desc_external_browser">使用系统浏览器打开</string>
+    <string name="btn_ok">确定</string>
+    <string name="action_add_file">添加文件</string>
+    <string name="msg_tap_to_add_file">点击下方按钮添加您的第一个HTML文件</string>
 </resources>

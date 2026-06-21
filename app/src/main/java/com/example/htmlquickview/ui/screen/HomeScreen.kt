@@ -260,11 +260,16 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            LargeFloatingActionButton(
                 onClick = { showPasteDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, stringResource(R.string.action_paste))
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = stringResource(R.string.action_paste),
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
     ) { paddingValues ->
@@ -327,38 +332,16 @@ fun HomeScreen(
 
                 if (displayedFiles.isEmpty()) {
                     item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            if (isFullTextSearch && searchQuery.isNotBlank()) {
-                                Icon(
-                                    Icons.Default.SearchOff,
-                                    null,
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
-                                )
-                                Spacer(modifier = Modifier.padding(8.dp))
-                                Text(
-                                    text = stringResource(R.string.msg_no_fulltext_results),
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                                )
-                                Text(
-                                    text = stringResource(R.string.msg_try_other_keywords),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                                )
-                            } else {
-                                Text(
-                                    text = stringResource(R.string.msg_no_files),
-                                    textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(0.6f)
-                                )
-                            }
+                        if (isFullTextSearch && searchQuery.isNotBlank()) {
+                            EmptySearchState(
+                                query = searchQuery,
+                                modifier = Modifier.fillParentMaxSize()
+                            )
+                        } else {
+                            EmptyFilesState(
+                                onAddFile = { showPasteDialog = true },
+                                modifier = Modifier.fillParentMaxSize()
+                            )
                         }
                     }
                 }

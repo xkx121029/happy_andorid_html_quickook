@@ -115,7 +115,12 @@ class HtmlFileViewModel(application: Application) : AndroidViewModel(application
 
     fun insertFile(content: String, fileName: String? = null, folderId: Long? = null, sourceUrl: String? = null) {
         viewModelScope.launch(Dispatchers.IO) {
-            val htmlFile = fileStorageService.createHtmlFile(content, fileName).copy(
+            val uniqueName = if (fileName != null) {
+                fileStorageService.generateUniqueFileName(fileName)
+            } else {
+                fileStorageService.generateUniqueFileName(fileStorageService.generateFileName())
+            }
+            val htmlFile = fileStorageService.createHtmlFile(content, uniqueName).copy(
                 folderId = folderId,
                 sourceUrl = sourceUrl
             )

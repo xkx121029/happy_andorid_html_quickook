@@ -1,12 +1,14 @@
 package com.example.htmlquickview.ui.screen
 
 import android.content.Intent
+import android.net.Uri
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -14,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -23,12 +26,26 @@ import com.example.htmlquickview.R
 import com.example.htmlquickview.model.Annotation
 import com.example.htmlquickview.model.HtmlFile
 import com.example.htmlquickview.service.FileStorageService
+import com.example.htmlquickview.service.LocalHttpServerService
+import com.example.htmlquickview.service.ServerErrorType
 import com.example.htmlquickview.ui.component.AnnotationPanel
 import com.example.htmlquickview.ui.component.ExportDialog
+import com.example.htmlquickview.ui.component.PreviewMode
+import com.example.htmlquickview.ui.component.PreviewModeDialog
 import com.example.htmlquickview.ui.component.SaveWebPageDialog
 import com.example.htmlquickview.viewmodel.HtmlFileViewModel
 import kotlinx.coroutines.launch
 import java.io.File
+
+@Composable
+private fun SolutionItem(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(vertical = 2.dp)
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +58,6 @@ fun DetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // 状态管理
     var showAnnotationPanel by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showSaveDialog by remember { mutableStateOf(false) }
@@ -50,14 +66,29 @@ fun DetailScreen(
     var annotations by remember { mutableStateOf<List<Annotation>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // 加载批注
+    var previewMode by remember { mutableStateOf(PreviewMode.LOCAL_PREVIEW) }
+    var showPreviewModeDialog by remember { mutableStateOf(false) }
+    var httpServerService by remember { mutableStateOf<LocalHttpServerService?>(null) }
+    var serverUrl by remember { mutableStateOf<String?>(null) }
+    var serverError by remember { mutableStateOf(false) }
+    var serverErrorMessage by remember { mutableStateOf("") }
+    var serverErrorType by remember { mutableStateOf(ServerErrorType.NONE) }
+    var webViewLoadError by remember { mutableStateOf(false) }
+    var webViewErrorMessage by remember { mutableStateOf("") }
+
     LaunchedEffect(htmlFile.id) {
         scope.launch {
             annotations = viewModel.getAnnotationsList(htmlFile.id)
         }
     }
 
-    // 分享文件
+    DisposableEffect(Unit) {
+        httpServerService = LocalHttpServerService(context)
+        onDispose {
+            httpServerService?.stopServer()
+        }
+    }
+
     val shareLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("*/*")
     ) { uri ->
@@ -71,6 +102,69 @@ fun DetailScreen(
                 e.printStackTrace()
             }
         }
+    }
+
+    fun startLocalServer() {
+        serverError = false
+        serverErrorMessage = ""
+        serverErrorType = ServerErrorType.NONE
+        try {
+            val htmlContent = fileStorageService.loadHtmlContent(htmlFile.filePath)
+            val server = httpServerService ?: return
+
+            var port = 8080
+            var success = false
+            var lastErrorMsg = ""
+            var lastErrorTyp = ServerErrorType.NONE
+
+            // 尝试端口 8080-8099
+            while (port < 8100) {
+                if (server.startServer(htmlContent, port)) {
+                    success = true
+                    break
+                }
+                lastErrorMsg = server.getLastError()
+                lastErrorTyp = server.getLastErrorType()
+                port++
+                // 短暂等待后重试下一个端口
+                Thread.sleep(50)
+            }
+
+            if (success && server.isRunning()) {
+                serverUrl = server.getServerUrl()
+            } else {
+                serverError = true
+                serverErrorType = lastErrorTyp
+                if (lastErrorMsg.isNotEmpty()) {
+                    serverErrorMessage = lastErrorMsg
+                } else {
+                    serverErrorMessage = "无法启动HTTP服务器，所有端口（8080-8099）均被占用"
+                    serverErrorType = ServerErrorType.PORT_IN_USE
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            serverError = true
+            serverErrorType = ServerErrorType.FILE_LOAD_ERROR
+            serverErrorMessage = "加载文件失败: ${e.message ?: "未知错误"}"
+        }
+    }
+
+    fun stopLocalServer() {
+        httpServerService?.stopServer()
+        serverUrl = null
+        serverError = false
+        serverErrorMessage = ""
+        serverErrorType = ServerErrorType.NONE
+        webViewLoadError = false
+        webViewErrorMessage = ""
+    }
+
+    fun refreshServer() {
+        webViewLoadError = false
+        webViewErrorMessage = ""
+        stopLocalServer()
+        startLocalServer()
     }
 
     Scaffold(
@@ -108,7 +202,15 @@ fun DetailScreen(
                         }
                     },
                     actions = {
-                        // 全屏按钮
+                        IconButton(
+                            onClick = { showPreviewModeDialog = true },
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        ) {
+                            Icon(Icons.Default.Public, stringResource(R.string.action_open))
+                        }
+
                         IconButton(
                             onClick = { isFullscreen = true },
                             colors = IconButtonDefaults.iconButtonColors(
@@ -118,7 +220,6 @@ fun DetailScreen(
                             Icon(Icons.Default.Fullscreen, stringResource(R.string.action_fullscreen))
                         }
 
-                        // 批注按钮
                         BadgedBox(
                             badge = {
                                 if (annotations.isNotEmpty()) {
@@ -141,7 +242,6 @@ fun DetailScreen(
                             }
                         }
 
-                        // 更多菜单
                         IconButton(
                             onClick = { showMoreMenu = true },
                             colors = IconButtonDefaults.iconButtonColors(
@@ -199,7 +299,6 @@ fun DetailScreen(
         },
         bottomBar = {
             if (!isFullscreen) {
-                // 底部批注快捷入口
                 NavigationBar(
                     containerColor = MaterialTheme.colorScheme.surface,
                     contentColor = MaterialTheme.colorScheme.onSurface,
@@ -283,62 +382,425 @@ fun DetailScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // WebView预览
-            AndroidView(
-                factory = { ctx ->
-                    WebView(ctx).apply {
-                        settings.javaScriptEnabled = false
-                        settings.domStorageEnabled = false
-                        settings.allowFileAccess = false
-                        settings.allowFileAccessFromFileURLs = false
-                        settings.allowUniversalAccessFromFileURLs = false
-                        settings.mediaPlaybackRequiresUserGesture = true
+            when (previewMode) {
+                PreviewMode.LOCAL_PREVIEW -> {
+                    // 本地预览 - 直接加载本地HTML文件，无需服务器
+                    AndroidView(
+                        factory = { ctx ->
+                            WebView(ctx).apply {
+                                settings.javaScriptEnabled = false
+                                settings.domStorageEnabled = false
+                                settings.allowFileAccess = false
+                                settings.allowFileAccessFromFileURLs = false
+                                settings.allowUniversalAccessFromFileURLs = false
+                                settings.mediaPlaybackRequiresUserGesture = true
 
-                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
-                            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
-                        }
-
-                        webViewClient = object : WebViewClient() {
-                            override fun shouldOverrideUrlLoading(
-                                view: WebView?,
-                                request: WebResourceRequest?
-                            ): Boolean {
-                                val url = request?.url?.toString() ?: return true
-                                if (url.startsWith("file://")) {
-                                    val filePathParent = File(htmlFile.filePath).parent
-                                    return !url.startsWith("file://$filePathParent")
+                                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                    settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                                 }
-                                return true
-                            }
-                        }
 
-                        try {
-                            val htmlContent = fileStorageService.loadHtmlContent(htmlFile.filePath)
-                            loadDataWithBaseURL(
-                                "about:blank",
-                                htmlContent,
-                                "text/html",
-                                "UTF-8",
-                                null
-                            )
-                            isLoading = false
-                        } catch (e: Exception) {
-                            settings.allowFileAccess = true
-                            loadUrl("file:///${htmlFile.filePath}")
-                            isLoading = false
+                                webViewClient = object : WebViewClient() {
+                                    override fun shouldOverrideUrlLoading(
+                                        view: WebView?,
+                                        request: WebResourceRequest?
+                                    ): Boolean {
+                                        val url = request?.url?.toString() ?: return true
+                                        if (url.startsWith("file://")) {
+                                            val filePathParent = File(htmlFile.filePath).parent
+                                            return !url.startsWith("file://$filePathParent")
+                                        }
+                                        return true
+                                    }
+                                }
+
+                                try {
+                                    val htmlContent = fileStorageService.loadHtmlContent(htmlFile.filePath)
+                                    loadDataWithBaseURL(
+                                        "about:blank",
+                                        htmlContent,
+                                        "text/html",
+                                        "UTF-8",
+                                        null
+                                    )
+                                    isLoading = false
+                                } catch (e: Exception) {
+                                    settings.allowFileAccess = true
+                                    loadUrl("file:///${htmlFile.filePath}")
+                                    isLoading = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+
+                PreviewMode.CHROME_PREVIEW -> {
+                    // Chrome预览 - 启动服务器，使用Chrome Custom Tabs打开
+                    LaunchedEffect(Unit) {
+                        if (serverUrl == null && !serverError) {
+                            startLocalServer()
                         }
                     }
-                },
-                modifier = Modifier.fillMaxSize()
-            )
 
-            // 加载指示器
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center),
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 4.dp
-                )
+                    if (serverUrl != null) {
+                        LaunchedEffect(serverUrl) {
+                            val customTabsIntent = CustomTabsIntent.Builder()
+                                .setShowTitle(true)
+                                .build()
+                            customTabsIntent.launchUrl(context, Uri.parse(serverUrl))
+                        }
+
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.OpenInBrowser,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Chrome浏览器已打开",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "正在使用Chrome浏览器预览HTML内容",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { previewMode = PreviewMode.LOCAL_PREVIEW }
+                                    ) {
+                                        Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("切换本地预览")
+                                    }
+                                    Button(
+                                        onClick = {
+                                            val customTabsIntent = CustomTabsIntent.Builder()
+                                                .setShowTitle(true)
+                                                .build()
+                                            customTabsIntent.launchUrl(context, Uri.parse(serverUrl))
+                                        }
+                                    ) {
+                                        Icon(Icons.Default.Refresh, null)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("重新打开")
+                                    }
+                                }
+                            }
+                        }
+                    } else if (serverError) {
+                        // 服务器错误界面
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = when (serverErrorType) {
+                                        ServerErrorType.PORT_IN_USE -> Icons.Default.Router
+                                        ServerErrorType.NETWORK_ERROR -> Icons.Default.WifiOff
+                                        ServerErrorType.FILE_LOAD_ERROR -> Icons.Default.ErrorOutline
+                                        else -> Icons.Default.Warning
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = when (serverErrorType) {
+                                        ServerErrorType.PORT_IN_USE -> "端口被占用"
+                                        ServerErrorType.NETWORK_ERROR -> "网络连接失败"
+                                        ServerErrorType.FILE_LOAD_ERROR -> "文件加载失败"
+                                        else -> "服务器启动失败"
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { previewMode = PreviewMode.LOCAL_PREVIEW }
+                                    ) {
+                                        Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("本地预览")
+                                    }
+                                    Button(
+                                        onClick = { refreshServer() }
+                                    ) {
+                                        Icon(Icons.Default.Refresh, null)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("重试")
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // 服务器启动中
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "正在启动本地服务器...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                PreviewMode.WEBVIEW_PREVIEW -> {
+                    // WebView预览 - 启动服务器，使用WebView内嵌访问
+                    LaunchedEffect(Unit) {
+                        if (serverUrl == null && !serverError) {
+                            startLocalServer()
+                        }
+                    }
+
+                    if (serverUrl != null) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            val currentUrl = serverUrl!!
+
+                            AndroidView(
+                                factory = { ctx ->
+                                    WebView(ctx).apply {
+                                        settings.apply {
+                                            javaScriptEnabled = true
+                                            domStorageEnabled = true
+                                            allowFileAccess = true
+                                            allowFileAccessFromFileURLs = true
+                                            allowUniversalAccessFromFileURLs = true
+                                            mediaPlaybackRequiresUserGesture = false
+                                            loadWithOverviewMode = true
+                                            useWideViewPort = true
+                                            builtInZoomControls = true
+                                            displayZoomControls = false
+                                            cacheMode = android.webkit.WebSettings.LOAD_NO_CACHE
+                                            databaseEnabled = true
+                                            setSupportZoom(true)
+                                            setSupportMultipleWindows(false)
+
+                                            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                                                mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                            }
+                                        }
+
+                                        webViewClient = object : WebViewClient() {
+                                            override fun shouldOverrideUrlLoading(
+                                                view: WebView?,
+                                                request: WebResourceRequest?
+                                            ): Boolean {
+                                                val url = request?.url?.toString() ?: return true
+                                                return !(url.startsWith("http://localhost") ||
+                                                        url.startsWith("http://127.0.0.1") ||
+                                                        url.startsWith("http://10.0.2.2"))
+                                            }
+
+                                            override fun onPageFinished(view: WebView?, url: String?) {
+                                                super.onPageFinished(view, url)
+                                                webViewLoadError = false
+                                            }
+
+                                            override fun onReceivedError(
+                                                view: WebView?,
+                                                request: WebResourceRequest?,
+                                                error: android.webkit.WebResourceError?
+                                            ) {
+                                                if (request?.isForMainFrame == true) {
+                                                    webViewLoadError = true
+                                                    webViewErrorMessage = "网页加载失败 (错误码: ${error?.errorCode})"
+                                                }
+                                            }
+                                        }
+
+                                        setDownloadListener { url, _, _, _, _ ->
+                                            // 阻止下载
+                                        }
+
+                                        postDelayed({
+                                            loadUrl(currentUrl)
+                                        }, 500)
+                                    }
+                                },
+                                modifier = Modifier.fillMaxSize()
+                            )
+
+                            // 刷新按钮
+                            FloatingActionButton(
+                                onClick = { refreshServer() },
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(16.dp),
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            ) {
+                                Icon(Icons.Default.Refresh, "刷新")
+                            }
+
+                            // WebView加载错误覆盖层
+                            if (webViewLoadError) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Card(
+                                        modifier = Modifier.padding(24.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = MaterialTheme.colorScheme.errorContainer
+                                        )
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(24.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.CloudOff,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(48.dp),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Text(
+                                                text = "加载失败",
+                                                style = MaterialTheme.typography.titleMedium,
+                                                color = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = webViewErrorMessage,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onErrorContainer
+                                            )
+                                            Spacer(modifier = Modifier.height(16.dp))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                OutlinedButton(
+                                                    onClick = { previewMode = PreviewMode.LOCAL_PREVIEW }
+                                                ) {
+                                                    Text("本地预览")
+                                                }
+                                                Button(
+                                                    onClick = { refreshServer() }
+                                                ) {
+                                                    Icon(Icons.Default.Refresh, null)
+                                                    Spacer(modifier = Modifier.width(4.dp))
+                                                    Text("重试")
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else if (serverError) {
+                        // 服务器错误界面
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = when (serverErrorType) {
+                                        ServerErrorType.PORT_IN_USE -> Icons.Default.Router
+                                        ServerErrorType.NETWORK_ERROR -> Icons.Default.WifiOff
+                                        ServerErrorType.FILE_LOAD_ERROR -> Icons.Default.ErrorOutline
+                                        else -> Icons.Default.Warning
+                                    },
+                                    contentDescription = null,
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = when (serverErrorType) {
+                                        ServerErrorType.PORT_IN_USE -> "端口被占用"
+                                        ServerErrorType.NETWORK_ERROR -> "网络连接失败"
+                                        ServerErrorType.FILE_LOAD_ERROR -> "文件加载失败"
+                                        else -> "服务器启动失败"
+                                    },
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                if (serverErrorMessage.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Text(
+                                        text = serverErrorMessage,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    OutlinedButton(
+                                        onClick = { previewMode = PreviewMode.LOCAL_PREVIEW }
+                                    ) {
+                                        Icon(Icons.Default.Description, null, modifier = Modifier.size(18.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("本地预览")
+                                    }
+                                    Button(
+                                        onClick = { refreshServer() }
+                                    ) {
+                                        Icon(Icons.Default.Refresh, null)
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("重试")
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // 服务器启动中
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                CircularProgressIndicator()
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "正在启动本地服务器...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
             }
 
             // 全屏退出按钮
@@ -357,13 +819,23 @@ fun DetailScreen(
         }
     }
 
-    // 批注面板
+    if (isLoading) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                strokeWidth = 4.dp
+            )
+        }
+    }
+
     if (showAnnotationPanel) {
         AnnotationPanel(
             annotations = annotations,
             onDismiss = { showAnnotationPanel = false },
             onAddHighlight = {
-                // 添加高亮
                 scope.launch {
                     viewModel.addHighlight(
                         htmlFile.id,
@@ -413,7 +885,6 @@ fun DetailScreen(
         )
     }
 
-    // 导出对话框
     if (showExportDialog) {
         ExportDialog(
             htmlFile = htmlFile,
@@ -422,7 +893,6 @@ fun DetailScreen(
                 scope.launch {
                     val result = viewModel.exportToPdf(htmlFile)
                     result.onSuccess { file ->
-                        // 打开PDF
                         val uri = FileProvider.getUriForFile(
                             context,
                             "${context.packageName}.fileprovider",
@@ -435,7 +905,6 @@ fun DetailScreen(
                         try {
                             context.startActivity(openIntent)
                         } catch (e: Exception) {
-                            // 没有PDF阅读器
                         }
                     }
                     showExportDialog = false
@@ -482,7 +951,6 @@ fun DetailScreen(
         )
     }
 
-    // 保存网页对话框
     if (showSaveDialog) {
         SaveWebPageDialog(
             htmlFile = htmlFile,
@@ -492,15 +960,27 @@ fun DetailScreen(
                     htmlFile = htmlFile,
                     sourceUrl = sourceUrl,
                     onProgress = { progress, status ->
-                        // 更新进度
                     },
                     onComplete = { result ->
                         result.onSuccess {
-                            // 显示成功提示
                         }
                         showSaveDialog = false
                     }
                 )
+            }
+        )
+    }
+
+    if (showPreviewModeDialog) {
+        PreviewModeDialog(
+            currentMode = previewMode,
+            onDismiss = { showPreviewModeDialog = false },
+            onSelectMode = { mode ->
+                if (mode != previewMode) {
+                    // 切换模式时停止服务器
+                    stopLocalServer()
+                    previewMode = mode
+                }
             }
         )
     }

@@ -74,7 +74,18 @@ class ShareReceiverService(private val context: Context) {
             return ShareResult.Error("无效的HTML内容")
         }
 
-        val fileName = subject?.let { sanitizeFileName(it) } ?: fileStorageService.generateFileName()
+        // 优先级1: 从HTML内容中提取 <title> 标签
+        val titleFromHtml = extractTitleFromHtml(text)
+        // 优先级2: 使用分享时的 subject
+        // 优先级3: 使用自动生成的时间戳文件名
+        val rawName = titleFromHtml ?: subject ?: null
+        val fileName = if (rawName != null) {
+            val sanitized = sanitizeFileName(rawName)
+            fileStorageService.generateUniqueFileName(sanitized)
+        } else {
+            fileStorageService.generateUniqueFileName(fileStorageService.generateFileName())
+        }
+
         val htmlFile = fileStorageService.createHtmlFile(text, fileName)
         return ShareResult.Success(htmlFile, "HTML内容已保存")
     }
@@ -88,7 +99,17 @@ class ShareReceiverService(private val context: Context) {
                         return ShareResult.Error("无效的HTML内容")
                     }
 
-                    val fileName = getFileNameFromUri(uri) ?: fileStorageService.generateFileName()
+                    // 优先级1: 从HTML内容中提取 <title> 标签
+                    val titleFromHtml = extractTitleFromHtml(content)
+                    // 优先级2: 从URI获取原始文件名
+                    val rawName = titleFromHtml ?: getFileNameFromUri(uri)
+                    val fileName = if (rawName != null) {
+                        val sanitized = sanitizeFileName(rawName)
+                        fileStorageService.generateUniqueFileName(sanitized)
+                    } else {
+                        fileStorageService.generateUniqueFileName(fileStorageService.generateFileName())
+                    }
+
                     val htmlFile = fileStorageService.createHtmlFile(content, fileName)
                     ShareResult.Success(htmlFile, "HTML文件已保存")
                 }
