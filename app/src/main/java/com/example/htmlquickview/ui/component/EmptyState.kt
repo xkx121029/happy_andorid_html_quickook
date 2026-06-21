@@ -4,6 +4,8 @@ import androidx.compose.animation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -32,10 +34,10 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // 动画图标容器
+        // 图标容器
         Surface(
-            modifier = Modifier.size(120.dp),
-            shape = MaterialTheme.shapes.extraLarge,
+            modifier = Modifier.size(80.dp),
+            shape = MaterialTheme.shapes.medium,
             color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
         ) {
             Box(
@@ -45,7 +47,7 @@ fun EmptyState(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(40.dp),
                     tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
                 )
             }
@@ -80,25 +82,59 @@ fun EmptyState(
 @Composable
 fun EmptyFilesState(
     onAddFile: () -> Unit,
+    showAddButton: Boolean = true,
+    category: EmptyCategory = EmptyCategory.ALL,
     modifier: Modifier = Modifier
 ) {
+    val (icon, title, subtitle) = when (category) {
+        EmptyCategory.ALL -> Triple(
+            Icons.Outlined.Description,
+            stringResource(R.string.msg_no_files),
+            stringResource(R.string.msg_tap_to_add_file)
+        )
+        EmptyCategory.FAVORITE -> Triple(
+            Icons.Default.Favorite,
+            stringResource(R.string.msg_no_favorites),
+            "点击心形图标收藏喜欢的HTML"
+        )
+        EmptyCategory.RECENT -> Triple(
+            Icons.Default.History,
+            stringResource(R.string.msg_no_recent),
+            "访问的HTML会显示在这里"
+        )
+        EmptyCategory.SEARCH -> Triple(
+            Icons.Default.SearchOff,
+            stringResource(R.string.msg_no_fulltext_results),
+            stringResource(R.string.msg_try_other_keywords)
+        )
+    }
+
     EmptyState(
-        icon = Icons.Outlined.Description,
-        title = stringResource(R.string.msg_no_files),
-        subtitle = stringResource(R.string.msg_tap_to_add_file),
-        action = {
-            Button(onClick = onAddFile) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.action_add_file))
+        icon = icon,
+        title = title,
+        subtitle = subtitle,
+        action = if (showAddButton) {
+            {
+                Button(onClick = onAddFile) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.action_add_file))
+                }
             }
-        },
+        } else null,
         modifier = modifier
     )
+}
+
+enum class EmptyCategory {
+    ALL,
+    FAVORITE,
+    RECENT,
+    SEARCH
 }
 
 @Composable

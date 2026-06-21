@@ -19,6 +19,8 @@
     <string name="hint_paste_html">粘贴HTML内容...</string>
     <string name="hint_file_name">输入文件名</string>
     <string name="msg_no_files">暂无HTML文件</string>
+    <string name="msg_no_favorites">没有收藏的HTML</string>
+    <string name="msg_no_recent">暂无最近访问</string>
     <string name="msg_no_history">暂无历史记录</string>
     <string name="msg_no_search_results">未找到匹配的文件</string>
     <string name="msg_file_saved">文件保存成功</string>

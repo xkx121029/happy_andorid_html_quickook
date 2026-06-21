@@ -332,17 +332,18 @@ fun HomeScreen(
 
                 if (displayedFiles.isEmpty()) {
                     item {
-                        if (isFullTextSearch && searchQuery.isNotBlank()) {
-                            EmptySearchState(
-                                query = searchQuery,
-                                modifier = Modifier.fillParentMaxSize()
-                            )
-                        } else {
-                            EmptyFilesState(
-                                onAddFile = { showPasteDialog = true },
-                                modifier = Modifier.fillParentMaxSize()
-                            )
+                        val emptyCategory = when {
+                            isFullTextSearch && searchQuery.isNotBlank() -> EmptyCategory.SEARCH
+                            selectedCategory == HtmlFileViewModel.Category.FAVORITE -> EmptyCategory.FAVORITE
+                            selectedCategory == HtmlFileViewModel.Category.RECENT -> EmptyCategory.RECENT
+                            else -> EmptyCategory.ALL
                         }
+                        EmptyFilesState(
+                            onAddFile = { showPasteDialog = true },
+                            showAddButton = selectedCategory == HtmlFileViewModel.Category.ALL,
+                            category = emptyCategory,
+                            modifier = Modifier.fillParentMaxSize()
+                        )
                     }
                 }
             }
